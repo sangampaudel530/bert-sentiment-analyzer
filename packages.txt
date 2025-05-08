@@ -1,3 +1,8 @@
-# Install Chromium for the selenium driver
-chromium-browser
-chromium-chromedriver
+# For using Google Chrome and ChromeDriver with selenium in Streamlit
+libgdk-pixbuf2.0-0
+libxss1
+libappindicator3-1
+libasound2
+libatk-bridge2.0-0
+libatk1.0-0
+libgdk-pixbuf2.0-0
