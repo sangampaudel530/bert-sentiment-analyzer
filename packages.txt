@@ -1,2 +1,3 @@
-google-chrome-stable
-chromedriver
+# Install Chromium for the selenium driver
+chromium-browser
+chromium-chromedriver
