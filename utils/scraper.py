@@ -1,17 +1,19 @@
+# utils/scraper.py
+
+import os
 import time
 import requests
-import os
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
-# Use your own OMDB API key or get one at http://www.omdbapi.com/apikey.aspx
-OMDB_API_KEY = "ad0e3181"  # Replace with your actual key if needed
+OMDB_API_KEY = "ad0e3181"  # Replace with your valid key
 
-# Define binary paths for deployed environments
-CHROMEDRIVER_PATH = "/usr/lib/chromium-browser/chromedriver"
+# Paths for Render deployment
 CHROME_BINARY_PATH = "/usr/bin/chromium-browser"
+CHROMEDRIVER_PATH = "/usr/lib/chromium-browser/chromedriver"
 
 def get_movie_id(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
@@ -33,13 +35,11 @@ def get_reviews(movie_id, max_reviews=20):
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
     )
 
-    # Set binary location if available (e.g. in Streamlit Cloud)
-    if os.path.exists(CHROME_BINARY_PATH):
+    # Use system binaries in Render, otherwise fallback to local driver
+    if os.path.exists(CHROMEDRIVER_PATH):
         chrome_options.binary_location = CHROME_BINARY_PATH
         service = Service(CHROMEDRIVER_PATH)
     else:
-        # fallback to webdriver-manager for local use
-        from webdriver_manager.chrome import ChromeDriverManager
         service = Service(ChromeDriverManager().install())
 
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -50,7 +50,7 @@ def get_reviews(movie_id, max_reviews=20):
         driver.get(url)
         time.sleep(3)
 
-        # Close login popup if exists
+        # Try to close login popup if it appears
         try:
             close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
             close_button.click()
@@ -63,12 +63,12 @@ def get_reviews(movie_id, max_reviews=20):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)
 
-        # Find review blocks
         review_blocks = driver.find_elements(
             By.CSS_SELECTOR,
             "div.ipc-overflowText--listCard div > div > div"
         )
 
+        print(f"Found {len(review_blocks)} reviews.")
         for block in review_blocks[:max_reviews]:
             text = block.text.strip()
             if text:
