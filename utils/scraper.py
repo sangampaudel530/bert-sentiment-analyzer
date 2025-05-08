@@ -2,7 +2,6 @@
 
 import time
 import requests
-import os
 import shutil
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -26,20 +25,17 @@ def get_reviews(movie_id, max_reviews=20):
     reviews = []
 
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # keep headless for deployment
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920x1080")
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
     )
 
-    # Try to set binary location for Linux servers (e.g., Streamlit Cloud)
-    if shutil.which("chromium-browser"):
-        chrome_options.binary_location = shutil.which("chromium-browser")
-    elif shutil.which("google-chrome"):
-        chrome_options.binary_location = shutil.which("google-chrome")
+    # Set correct binary for deployment
+    chrome_path = shutil.which("google-chrome") or shutil.which("google-chrome-stable")
+    if chrome_path:
+        chrome_options.binary_location = chrome_path
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
@@ -49,7 +45,6 @@ def get_reviews(movie_id, max_reviews=20):
         driver.get(url)
         time.sleep(3)
 
-        # Close login popup if exists
         try:
             close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
             close_button.click()
@@ -57,24 +52,18 @@ def get_reviews(movie_id, max_reviews=20):
         except:
             pass
 
-        # Scroll to load more
-        scroll_pause_time = 2
         for _ in range(5):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(scroll_pause_time)
+            time.sleep(2)
 
-        # New review selector based on updated IMDB layout
-        review_blocks = driver.find_elements(
-            By.CSS_SELECTOR,
-            "div.ipc-overflowText--listCard div > div > div"
-        )
+        review_blocks = driver.find_elements(By.CSS_SELECTOR, "div.ipc-overflowText--listCard div > div > div")
 
         print(f"Found {len(review_blocks)} reviews.")
         for block in review_blocks[:max_reviews]:
             reviews.append(block.text.strip())
 
     except Exception as e:
-        print("Error fetching reviews:", str(e))
+        print("Error:", str(e))
 
     finally:
         driver.quit()
