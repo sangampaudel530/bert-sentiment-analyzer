@@ -1,5 +1,9 @@
+# utils/scraper.py
+
 import time
 import requests
+import os
+import shutil
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -22,11 +26,20 @@ def get_reviews(movie_id, max_reviews=20):
     reviews = []
 
     chrome_options = Options()
+    chrome_options.add_argument("--headless")  # keep headless for deployment
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920x1080")
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
     )
+
+    # Try to set binary location for Linux servers (e.g., Streamlit Cloud)
+    if shutil.which("chromium-browser"):
+        chrome_options.binary_location = shutil.which("chromium-browser")
+    elif shutil.which("google-chrome"):
+        chrome_options.binary_location = shutil.which("google-chrome")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
@@ -61,7 +74,7 @@ def get_reviews(movie_id, max_reviews=20):
             reviews.append(block.text.strip())
 
     except Exception as e:
-        print("Error:", str(e))
+        print("Error fetching reviews:", str(e))
 
     finally:
         driver.quit()
