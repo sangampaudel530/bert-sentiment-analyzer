@@ -15,7 +15,7 @@ def get_chrome_binary_location():
         return "/usr/bin/chromium"  # Path for Render or cloud platforms
     elif os.getenv("DEPLOYMENT_ENV") == "railway":  # Check if deploying on Railway
         return "/usr/bin/chromium"  # Path for Railway or similar environments
-    return None  # Local testing will use the default Chrome installation
+    return None  # Local testing will use the default Chrome installation 
 
 def get_movie_id(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
