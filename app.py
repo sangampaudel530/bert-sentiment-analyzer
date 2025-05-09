@@ -1,12 +1,12 @@
-import streamlit as st
 import pandas as pd
+import streamlit
 from utils.scraper import get_movie_id, get_reviews
 from streamlit_lottie import st_lottie
 import requests
 from utils.predict import predict_sentiment_with_score
 
 # Page configuration
-st.set_page_config(page_title="🎬 Movie Review Sentiment App", layout="wide", page_icon="🎥")
+streamlit.set_page_config(page_title="🎬 Movie Review Sentiment App", layout="wide", page_icon="🎥")
 
 # Load Lottie animation
 def load_lottie_url(url):
@@ -19,11 +19,11 @@ lottie_url = "https://assets1.lottiefiles.com/packages/lf20_qp1q7mct.json"
 lottie_movie = load_lottie_url(lottie_url)
 
 # Initialize section state
-if "active_section" not in st.session_state:
-    st.session_state.active_section = "dataset"
+if "active_section" not in streamlit.session_state:
+    streamlit.session_state.active_section = "dataset"
 
 # Custom CSS with hover effects
-st.markdown("""
+streamlit.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
     html, body, [class*="css"] {
@@ -93,32 +93,32 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Centered Lottie animation
-col1, col2, col3 = st.columns([1.3, 0.8, 1])
+col1, col2, col3 = streamlit.columns([1.3, 0.8, 1])
 with col2:
     st_lottie(lottie_movie, speed=1, height=200, width=200, key="movie")
 
 # Title
-st.markdown("<div class='main-title'>Movie Review Sentiment <span>App</span></div>", unsafe_allow_html=True)
+streamlit.markdown("<div class='main-title'>Movie Review Sentiment <span>App</span></div>", unsafe_allow_html=True)
 
 # Navigation bar
-st.markdown("<div class='nav-bar'>", unsafe_allow_html=True)
-col1, col2, col3 = st.columns(3)
+streamlit.markdown("<div class='nav-bar'>", unsafe_allow_html=True)
+col1, col2, col3 = streamlit.columns(3)
 with col1:
-    if st.button("📁 Dataset"):
-        st.session_state.active_section = "dataset"
+    if streamlit.button("📁 Dataset"):
+        streamlit.session_state.active_section = "dataset"
 with col2:
-    if st.button("🎬 IMDb Reviews"):
-        st.session_state.active_section = "imdb"
+    if streamlit.button("🎬 IMDb Reviews"):
+        streamlit.session_state.active_section = "imdb"
 with col3:
-    if st.button("✍️ Manual Input"):
-        st.session_state.active_section = "manual"
-st.markdown("</div>", unsafe_allow_html=True)
+    if streamlit.button("✍️ Manual Input"):
+        streamlit.session_state.active_section = "manual"
+streamlit.markdown("</div>", unsafe_allow_html=True)
 
 # Section: Dataset Upload
-if st.session_state.active_section == "dataset":
-    st.subheader("📁 Analyze Sentiment from Dataset")
-    st.write("Upload your dataset file (CSV or Excel) containing movie reviews.")
-    dataset_file = st.file_uploader("Upload your dataset file", type=["csv", "xlsx"])
+if streamlit.session_state.active_section == "dataset":
+    streamlit.subheader("📁 Analyze Sentiment from Dataset")
+    streamlit.write("Upload your dataset file (CSV or Excel) containing movie reviews.")
+    dataset_file = streamlit.file_uploader("Upload your dataset file", type=["csv", "xlsx"])
 
     if dataset_file:
         try:
@@ -127,33 +127,33 @@ if st.session_state.active_section == "dataset":
             else:
                 df = pd.read_excel(dataset_file)
 
-            st.success("Dataset uploaded successfully!")
+            streamlit.success("Dataset uploaded successfully!")
 
             # Auto-detect review column
             possible_cols = [col for col in df.columns if col.strip().lower() in ["review", "reviews"]]
             if possible_cols:
                 review_column = possible_cols[0]
-                st.success(f"Auto-detected review column: {review_column}")
+                streamlit.success(f"Auto-detected review column: {review_column}")
             else:
-                review_column = st.selectbox("Select the column containing reviews", df.columns)
+                review_column = streamlit.selectbox("Select the column containing reviews", df.columns)
 
             max_rows = len(df)
-            num_rows = st.slider("Select number of rows to analyze", min_value=10, max_value=max_rows, value=min(100, max_rows), step=10)
+            num_rows = streamlit.slider("Select number of rows to analyze", min_value=10, max_value=max_rows, value=min(100, max_rows), step=10)
 
             if review_column:
                 df_subset = df[[review_column]].astype(str).iloc[:num_rows]
 
-                if st.button("🔍 Predict Sentiment"):
-                    with st.spinner("Analyzing sentiment..."):
+                if streamlit.button("🔍 Predict Sentiment"):
+                    with streamlit.spinner("Analyzing sentiment..."):
                         predictions = predict_sentiment_with_score(df_subset[review_column].tolist())
                         df_subset["Sentiment"] = [pred[0] for pred in predictions]
                         df_subset["Confidence"] = [pred[1] for pred in predictions]
 
-                    st.subheader("📊 Sentiment Predictions (Preview)")
-                    st.dataframe(df_subset)
+                    streamlit.subheader("📊 Sentiment Predictions (Preview)")
+                    streamlit.dataframe(df_subset)
 
                     csv = df_subset.to_csv(index=False)
-                    st.download_button(
+                    streamlit.download_button(
                         label="📥 Download Predictions as CSV",
                         data=csv,
                         file_name="movie_reviews_sentiment_results.csv",
@@ -161,56 +161,61 @@ if st.session_state.active_section == "dataset":
                     )
 
         except Exception as e:
-            st.error(f"Error processing file: {e}")
+            streamlit.error(f"Error processing file: {e}")
 
 # Section: IMDb Reviews
-elif st.session_state.active_section == "imdb":
-    st.subheader("🎬 Fetch Reviews from IMDb")
-    movie_title = st.text_input("Enter a movie title", placeholder="e.g. Inception")
-    if st.button("Fetch Reviews"):
+elif streamlit.session_state.active_section == "imdb":
+    streamlit.subheader("🎬 Fetch Reviews from IMDb")
+    movie_title = streamlit.text_input("Enter a movie title", placeholder="e.g. Inception")
+    if streamlit.button("Fetch Reviews"):
         if not movie_title:
-            st.warning("Please enter a movie title.")
+            streamlit.warning("Please enter a movie title.")
         else:
-            with st.spinner("Fetching data..."):
-                movie_id, poster_url = get_movie_id(movie_title)
+            with streamlit.spinner("Fetching data..."):
+                movie_id = get_movie_id(movie_title)
                 if movie_id:
+                    url = f"http://www.omdbapi.com/?i={movie_id}&apikey=ad0e3181"
+                    response = requests.get(url)
+                    movie_data = response.json()
+                    poster_url = movie_data.get("Poster", None)
+
                     reviews = get_reviews(movie_id, max_reviews=20)
                     if poster_url:
-                        st.image(poster_url, caption=f"Poster of {movie_title}", use_container_width=True)
+                        streamlit.image(poster_url, caption=f"Poster of {movie_title}", use_container_width=True)
                     if reviews:
-                        st.success(f"Fetched {len(reviews)} reviews for '{movie_title}'")
-                        st.subheader("📃 Reviews")
+                        streamlit.success(f"Fetched {len(reviews)} reviews for '{movie_title}'")
+                        streamlit.subheader("📃 Reviews")
                         for i, review in enumerate(reviews, 1):
                             sentiment_score = predict_sentiment_with_score([review])
                             sentiment, score = sentiment_score[0]
                             color = "green" if sentiment == "Positive" else "red"
-                            st.markdown(
+                            streamlit.markdown(
                                 f"<div class='review-box' style='color:{color};'><strong>Review {i}:</strong><br>{review}<br><br><strong>Sentiment:</strong> {sentiment} with confidence score: {score:.2f}</div>",
                                 unsafe_allow_html=True)
                     else:
-                        st.error("No reviews found or failed to scrape reviews.")
+                        streamlit.error("No reviews found or failed to scrape reviews.")
                 else:
-                    st.error("Movie not found. Please check the title and try again.")
+                    streamlit.error("Movie not found. Please check the title and try again.")
 
 # Section: Manual Input
-elif st.session_state.active_section == "manual":
-    st.subheader("✍️ Paste Reviews Manually")
-    with st.form("manual_input_form"):
-        manual_reviews = st.text_area("Paste the movie reviews here (one or more paragraphs)", height=200)
-        submitted = st.form_submit_button("Analyze Sentiment")
+elif streamlit.session_state.active_section == "manual":
+    streamlit.subheader("✍️ Paste Reviews Manually")
+    with streamlit.form("manual_input_form"):
+        manual_reviews = streamlit.text_area("Paste the movie reviews here (one or more paragraphs)", height=200)
+        submitted = streamlit.form_submit_button("Analyze Sentiment")
         if submitted and manual_reviews.strip():
-            with st.spinner("Analyzing sentiment..."):
+            with streamlit.spinner("Analyzing sentiment..."):
                 predictions = predict_sentiment_with_score([manual_reviews])
                 sentiment, score = predictions[0]
                 color = "green" if sentiment == "Positive" else "red"
-                st.markdown(
+                streamlit.markdown(
                     f"<div class='review-box' style='color:{color};'><strong>Sentiment:</strong> {sentiment} with confidence score: {score:.2f}</div>",
                     unsafe_allow_html=True)
         elif submitted:
-            st.warning("Please enter a review before submitting.")
+            streamlit.warning("Please enter a review before submitting.")
 
 # Footer
-st.markdown("""
+streamlit.markdown("""
     <hr style="margin-top: 3rem;"/>
     <div style='text-align: center; font-size: 0.9rem; color: grey;'>
         Built with ❤️ using Streamlit | © 2025 Sangam Paudel
