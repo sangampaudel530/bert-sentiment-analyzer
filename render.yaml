@@ -4,6 +4,6 @@ services:
     runtime: python
     startCommand: streamlit run app.py --server.port=$PORT --server.enableCORS=false
     envVars:
-      - key: ad0e3181
-        value: ""  # Set this environment variable via Render's dashboard for security
+      - key: OMDB_API_KEY  # The key your code will use
+        value: ""  # Leave it empty because you've already set it manually in Render's dashboard
     plan: free
