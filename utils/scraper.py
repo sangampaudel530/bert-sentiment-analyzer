@@ -1,5 +1,3 @@
-# utils/scraper.py
-
 import os
 import time
 import requests
@@ -7,9 +5,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
-OMDB_API_KEY = "ad0e3181"  # Replace with your actual key
+OMDB_API_KEY = "ad0e3181"  # Replace this
 
 
 def get_movie_id(title):
@@ -25,24 +22,23 @@ def get_reviews(movie_id, max_reviews=20):
     reviews = []
 
     chrome_options = Options()
-
-    # Detect if running on Render (no display)
-    is_render = os.getenv("RENDER", "false").lower() == "true" or os.getenv("PORT") == "8501"
-
-    if is_render:
-        chrome_options.add_argument("--headless")
-        chrome_options.binary_location = "/usr/bin/chromium-browser"
-        driver_path = "/usr/bin/chromedriver"
-        service = Service(executable_path=driver_path)
-    else:
-        # For local development
-        service = Service(ChromeDriverManager().install())
-
+    chrome_options.add_argument("--headless=new")  # Use new headless mode for Chrome 109+
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
     )
+
+    # Detect environment
+    if os.environ.get("RENDER"):
+        chrome_path = "/usr/bin/chromium-browser"
+        driver_path = "/usr/bin/chromedriver"
+        chrome_options.binary_location = chrome_path
+        service = Service(executable_path=driver_path)
+    else:
+        # Local fallback
+        from webdriver_manager.chrome import ChromeDriverManager
+        service = Service(ChromeDriverManager().install())
 
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
@@ -60,7 +56,7 @@ def get_reviews(movie_id, max_reviews=20):
         except:
             pass
 
-        # Scroll to load more reviews
+        # Scroll to load more
         for _ in range(5):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)
