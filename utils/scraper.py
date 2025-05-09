@@ -1,5 +1,6 @@
 # utils/scraper.py
 
+import os
 import time
 import requests
 from selenium import webdriver
@@ -8,8 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-OMDB_API_KEY = "ad0e3181"  # Replace this
-
+OMDB_API_KEY = os.getenv("OMDB_API_KEY", "ad0e3181")  # Use env variable or fallback
 
 def get_movie_id(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
@@ -17,19 +17,20 @@ def get_movie_id(title):
     data = response.json()
     if data.get("Response") == "True":
         return data.get("imdbID")
-    return None
-
+    raise Exception("Movie not found. Please check the title and try again.")
 
 def get_reviews(movie_id, max_reviews=20):
     reviews = []
 
     chrome_options = Options()
-    # chrome_options.add_argument("--headless")  # disable if you want to debug
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
     )
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920x1080")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
@@ -39,7 +40,6 @@ def get_reviews(movie_id, max_reviews=20):
         driver.get(url)
         time.sleep(3)
 
-        # Close login popup if exists
         try:
             close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
             close_button.click()
@@ -47,17 +47,12 @@ def get_reviews(movie_id, max_reviews=20):
         except:
             pass
 
-        # Scroll to load more
         scroll_pause_time = 2
         for _ in range(5):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(scroll_pause_time)
 
-        # New review selector based on updated IMDB layout
-        review_blocks = driver.find_elements(
-            By.CSS_SELECTOR,
-            "div.ipc-overflowText--listCard div > div > div"
-        )
+        review_blocks = driver.find_elements(By.CSS_SELECTOR, "div.ipc-overflowText--listCard div > div > div")
 
         print(f"Found {len(review_blocks)} reviews.")
         for block in review_blocks[:max_reviews]:
@@ -65,7 +60,6 @@ def get_reviews(movie_id, max_reviews=20):
 
     except Exception as e:
         print("Error:", str(e))
-
     finally:
         driver.quit()
 

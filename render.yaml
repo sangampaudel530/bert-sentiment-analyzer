@@ -1,15 +1,12 @@
 services:
   - type: web
-    name: movie-review-sentiment-app
-    env: python
-    plan: free
+    name: bert-sentiment-analyzer
+    runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run app.py
+    startCommand: streamlit run app.py --server.port=$PORT --server.enableCORS=false
     envVars:
+      - key: OMDB_API_KEY
+        value: ad0e3181
       - key: PYTHONUNBUFFERED
-        value: '1'
-      - key: CHROMEDRIVER_PATH
-        value: /usr/bin/chromedriver
-      - key: GOOGLE_CHROME_BIN
-        value: /opt/render/project/.render/chrome/opt/google/chrome/chrome
-    runtimeEnv: python
+        value: "1"
+    plan: free
