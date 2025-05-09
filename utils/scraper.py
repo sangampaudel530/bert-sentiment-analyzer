@@ -5,8 +5,17 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+import os
 
 OMDB_API_KEY = "ad0e3181"  # Replace with your actual OMDb key
+
+# Set the location for Chrome binary for cloud environments
+def get_chrome_binary_location():
+    if os.getenv("DEPLOYMENT_ENV") == "render":  # Check if deploying on Render
+        return "/usr/bin/chromium"  # Path for Render or cloud platforms
+    elif os.getenv("DEPLOYMENT_ENV") == "railway":  # Check if deploying on Railway
+        return "/usr/bin/chromium"  # Path for Railway or similar environments
+    return None  # Local testing will use the default Chrome installation
 
 def get_movie_id(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
@@ -27,7 +36,13 @@ def get_reviews(movie_id, max_reviews=20):
     chrome_options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
     )
+    
+    # Set the path for the Chrome binary for cloud environments
+    chrome_binary_location = get_chrome_binary_location()
+    if chrome_binary_location:
+        chrome_options.binary_location = chrome_binary_location
 
+    # Set up the ChromeDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
     try:
