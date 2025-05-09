@@ -10,11 +10,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-OMDB_API_KEY = os.getenv("OMDB_API_KEY", "ad0e3181")  # Make sure to set this in Render's environment variables
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 
 def get_movie_id(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
@@ -38,12 +37,7 @@ def get_reviews(movie_id, max_reviews=20):
     chrome_options.add_argument("start-maximized")
     chrome_options.add_argument("user-agent=Mozilla/5.0")
 
-    driver_path = "/usr/bin/chromedriver"  # Ensure chromedriver is correctly installed on Render
-    if os.path.exists(driver_path):
-        service = Service(executable_path=driver_path)
-    else:
-        service = Service(ChromeDriverManager().install())  # Fallback to webdriver_manager if not on Render
-
+    service = Service("/usr/bin/chromedriver")
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     try:
@@ -51,20 +45,17 @@ def get_reviews(movie_id, max_reviews=20):
         logger.info(f"Opening: {url}")
         driver.get(url)
 
-        # Wait for reviews to load
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.ipc-overflowText--listCard"))
         )
 
         try:
-            # Close any login or popup if exists
             close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
             close_button.click()
             time.sleep(1)
         except Exception:
             pass
 
-        # Scroll to load more reviews
         for _ in range(5):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)

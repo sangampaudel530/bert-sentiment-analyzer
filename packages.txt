@@ -1,2 +1,12 @@
-    chromium-browser
-    chromium-chromedriver
+# packages.txt
+wget
+curl
+unzip
+fonts-liberation
+libnss3
+libxss1
+libappindicator3-1
+libasound2
+libatk-bridge2.0-0
+libgtk-3-0
+xdg-utils
