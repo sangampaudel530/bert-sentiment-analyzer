@@ -1,15 +1,15 @@
 services:
   - type: web
-    name: imdb-review-app
+    name: movie-review-sentiment-app
     env: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run app.py
     envVars:
       - key: PYTHONUNBUFFERED
-        value: "1"
-      - key: RENDER
-        value: "1"
-    build:
-      packages:
-        - chromium-browser
-        - chromium-chromedriver
+        value: '1'
+      - key: CHROMEDRIVER_PATH
+        value: /usr/bin/chromedriver
+      - key: GOOGLE_CHROME_BIN
+        value: /opt/render/project/.render/chrome/opt/google/chrome/chrome
+    runtimeEnv: python
