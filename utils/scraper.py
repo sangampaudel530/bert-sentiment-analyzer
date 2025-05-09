@@ -1,15 +1,20 @@
-# utils/scraper.py
-
 import os
 import time
+import logging
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-OMDB_API_KEY = os.getenv("OMDB_API_KEY", "ad0e3181")  # Use env variable or fallback
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+OMDB_API_KEY = os.getenv("OMDB_API_KEY", "ad0e3181")  # Make sure to set this in Render's environment variables
 
 def get_movie_id(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
@@ -17,49 +22,62 @@ def get_movie_id(title):
     data = response.json()
     if data.get("Response") == "True":
         return data.get("imdbID")
-    raise Exception("Movie not found. Please check the title and try again.")
+    logger.warning(f"Movie not found: {title}")
+    return None
 
 def get_reviews(movie_id, max_reviews=20):
     reviews = []
 
     chrome_options = Options()
     chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    )
+    chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-infobars")
+    chrome_options.add_argument("start-maximized")
+    chrome_options.add_argument("user-agent=Mozilla/5.0")
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver_path = "/usr/bin/chromedriver"  # Ensure chromedriver is correctly installed on Render
+    if os.path.exists(driver_path):
+        service = Service(executable_path=driver_path)
+    else:
+        service = Service(ChromeDriverManager().install())  # Fallback to webdriver_manager if not on Render
+
+    driver = webdriver.Chrome(service=service, options=chrome_options)
 
     try:
         url = f"https://www.imdb.com/title/{movie_id}/reviews"
-        print(f"Opening: {url}")
+        logger.info(f"Opening: {url}")
         driver.get(url)
-        time.sleep(3)
+
+        # Wait for reviews to load
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div.ipc-overflowText--listCard"))
+        )
 
         try:
+            # Close any login or popup if exists
             close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
             close_button.click()
             time.sleep(1)
-        except:
+        except Exception:
             pass
 
-        scroll_pause_time = 2
+        # Scroll to load more reviews
         for _ in range(5):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(scroll_pause_time)
+            time.sleep(2)
 
         review_blocks = driver.find_elements(By.CSS_SELECTOR, "div.ipc-overflowText--listCard div > div > div")
+        logger.info(f"Found {len(review_blocks)} reviews.")
 
-        print(f"Found {len(review_blocks)} reviews.")
         for block in review_blocks[:max_reviews]:
             reviews.append(block.text.strip())
 
     except Exception as e:
-        print("Error:", str(e))
+        logger.error(f"Error: {str(e)}")
+
     finally:
         driver.quit()
 
