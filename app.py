@@ -5,6 +5,7 @@ from streamlit_lottie import st_lottie
 import requests
 from utils.predict import predict_sentiment_with_score
 
+
 # Page configuration
 streamlit.set_page_config(page_title="🎬 Movie Review Sentiment App", layout="wide", page_icon="🎥")
 
