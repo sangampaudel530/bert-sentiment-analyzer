@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: sentiment-app
-        image: projectsentimentacr.azurecr.io/movie-review-sentiment-analyzer:latest
+        image: projectsentimentacr.azurecr.io/sentiment-app:latest
         ports:
         - containerPort: 8501
         imagePullPolicy: Always
