@@ -35,5 +35,5 @@ ENV CHROMIUM_PATH=/usr/bin/chromium
 # Expose the port your app runs on
 EXPOSE 8501
 
-# Command to run the application
-CMD ["streamlit", "run", "app.py"]
+# Add this Streamlit command with 0.0.0.0 binding
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false"]
