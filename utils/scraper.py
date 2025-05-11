@@ -45,7 +45,7 @@ def get_reviews(movie_id, max_reviews=20):
         chrome_options.binary_location = chrome_binary_location
 
     # Set up the ChromeDriver using ChromeDriverManager
-    driver = webdriver.Chrome(executable_path="/usr/bin/chromedriver", options=options)
+    driver = webdriver.Chrome(executable_path="/usr/bin/chromedriver", options=chrome_options)
 
 
     try:
