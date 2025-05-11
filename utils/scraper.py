@@ -1,67 +1,44 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import time
+import requests
+
+# Set your OMDb API key
+OMDB_API_KEY = "ad0e3181"
 
 def get_movie_id(movie_name):
-    search_name = movie_name.replace(" ", "+")
-    search_url = f"https://www.imdb.com/find?q={search_name}&s=tt&ttype=ft&ref_=fn_ft"
+    # Use the OMDb API to fetch movie data based on the movie name
+    search_url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&s={movie_name}"
 
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
-    )
+    response = requests.get(search_url)
+    data = response.json()
 
-    driver = webdriver.Chrome(options=options)
-    driver.get(search_url)
-
-    try:
-        wait = WebDriverWait(driver, 10)
-        first_result = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "td.result_text a"))
-        )
-        href = first_result.get_attribute("href")
-        movie_id = href.split("/")[4]
+    if data["Response"] == "True":
+        # If the movie is found, return the IMDb ID
+        movie_id = data["Search"][0]["imdbID"]
         return movie_id
-    except Exception as e:
-        print("Movie not found:", e)
+    else:
+        print("Movie not found.")
         return None
-    finally:
-        driver.quit()
 
 def get_reviews(movie_id, max_reviews=20):
-    url = f"https://www.imdb.com/title/{movie_id}/reviews"
+    # Fetch movie details and reviews using OMDb API
+    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&i={movie_id}&plot=full"
+    
+    response = requests.get(url)
+    movie_data = response.json()
 
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
-    )
+    if movie_data["Response"] == "True":
+        # Collect reviews if available (using plot as a placeholder for reviews)
+        reviews = []
+        
+        # Example: Add reviews from the plot (since OMDb doesn't provide direct reviews, you may use 'Plot' or 'Actors' etc.)
+        reviews.append(movie_data["Plot"])
+        
+        # If you want to add more information like actors, directors, etc., you can append here
+        reviews.append(f"Actors: {movie_data.get('Actors', 'N/A')}")
+        reviews.append(f"Director: {movie_data.get('Director', 'N/A')}")
+        reviews.append(f"Rating: {movie_data.get('imdbRating', 'N/A')}")
 
-    driver = webdriver.Chrome(options=options)
-    driver.get(url)
+        return reviews[:max_reviews]
+    else:
+        print("Error fetching reviews:", movie_data.get("Error", "Unknown error"))
+        return []
 
-    time.sleep(3)
-    reviews = []
-
-    try:
-        review_elements = driver.find_elements(By.CSS_SELECTOR, "div.review-container")
-        for review_element in review_elements[:max_reviews]:
-            try:
-                review_text = review_element.find_element(By.CSS_SELECTOR, ".text.show-more__control").text
-                reviews.append(review_text)
-            except:
-                continue
-    except Exception as e:
-        print("Error extracting reviews:", e)
-    finally:
-        driver.quit()
-
-    return reviews
