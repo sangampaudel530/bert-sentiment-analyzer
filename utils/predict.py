@@ -1,50 +1,58 @@
-import os
-import gdown
-import torch
-import torch.nn.functional as F
-from transformers import BertTokenizer, BertForSequenceClassification, BertConfig
-from safetensors.torch import load_file
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
 
-# Set model directory and file paths
-MODEL_DIR = "bert_sentiment_model"
-MODEL_PATH = os.path.join(MODEL_DIR, "model.safetensors")
-GDRIVE_FILE_ID = "1Qki6uC3x9DX_n1OoEZxuD-C8bdGZUM9n"
+def get_movie_id(movie_name):
+    search_name = movie_name.replace(" ", "+")
+    search_url = f"https://www.imdb.com/find?q={search_name}&s=tt&ttype=ft&ref_=fn_ft"
 
-# Download model if not present
-if not os.path.exists(MODEL_PATH):
-    print("Downloading model from Google Drive...")
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
-    gdown.download(url, MODEL_PATH, quiet=False)
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
 
-# Set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    driver = webdriver.Chrome(options=options)
+    driver.get(search_url)
 
-# Load tokenizer and config
-tokenizer = BertTokenizer.from_pretrained(MODEL_DIR)
-config = BertConfig.from_pretrained(MODEL_DIR)
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "a.ipc-metadata-list-summary-item__t"))
+        )
+        first_result = driver.find_element(By.CSS_SELECTOR, "a.ipc-metadata-list-summary-item__t")
+        href = first_result.get_attribute("href")
+        movie_id = href.split("/")[4]
+        return movie_id
+    except Exception as e:
+        print("Movie not found:", e)
+        return None
+    finally:
+        driver.quit()
 
-# Initialize and load model
-model = BertForSequenceClassification(config)
-model.load_state_dict(load_file(MODEL_PATH))
-model.to(device)
-model.eval()
 
-def predict_sentiment_with_score(texts):
-    """
-    Predict sentiment and provide confidence score for each review.
-    """
-    inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="pt", max_length=512)
-    inputs = {k: v.to(device) for k, v in inputs.items()}
+def get_reviews(movie_id, max_reviews=20):
+    url = f"https://www.imdb.com/title/{movie_id}/reviews"
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
 
-    with torch.no_grad():
-        outputs = model(**inputs)
-        probs = F.softmax(outputs.logits, dim=1)
-        scores, preds = torch.max(probs, dim=1)
+    driver = webdriver.Chrome(options=options)
+    driver.get(url)
 
-    results = []
-    for label, score in zip(preds, scores):
-        label_text = "Positive" if label == 1 else "Negative"
-        results.append((label_text, float(score)))
+    time.sleep(3)
+    reviews = []
 
-    return results
+    try:
+        review_elements = driver.find_elements(By.CSS_SELECTOR, "div.review-container")
+        for review_element in review_elements[:max_reviews]:
+            review_text = review_element.find_element(By.CSS_SELECTOR, ".text.show-more__control").text
+            reviews.append(review_text)
+    except Exception as e:
+        print("Error extracting reviews:", e)
+    finally:
+        driver.quit()
+
+    return reviews
