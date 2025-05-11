@@ -15,6 +15,8 @@ def get_chrome_binary_location():
         return "/usr/bin/chromium"  # Path for Render or cloud platforms
     elif os.getenv("DEPLOYMENT_ENV") == "railway":  # Check if deploying on Railway
         return "/usr/bin/chromium"  # Path for Railway or similar environments
+    elif os.getenv("DEPLOYMENT_ENV") == "kubernetes":  # Check if deploying on Kubernetes
+        return "/usr/bin/chromium"  # Path for Kubernetes
     return None  # Local testing will use the default Chrome installation 
 
 def get_movie_id(title):
@@ -42,7 +44,7 @@ def get_reviews(movie_id, max_reviews=20):
     if chrome_binary_location:
         chrome_options.binary_location = chrome_binary_location
 
-    # Set up the ChromeDriver
+    # Set up the ChromeDriver using ChromeDriverManager
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
     try:
