@@ -1,86 +1,52 @@
-import time
-import requests
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-import os
-
-OMDB_API_KEY = "ad0e3181"  # Replace with your actual OMDb key
-
-# Set the location for Chrome binary for cloud environments
-def get_chrome_binary_location():
-    if os.getenv("DEPLOYMENT_ENV") == "render":  # Check if deploying on Render
-        return "/usr/bin/chromium"  # Path for Render or cloud platforms
-    elif os.getenv("DEPLOYMENT_ENV") == "railway":  # Check if deploying on Railway
-        return "/usr/bin/chromium"  # Path for Railway or similar environments
-    elif os.getenv("DEPLOYMENT_ENV") == "kubernetes":  # Check if deploying on Kubernetes
-        return "/usr/bin/chromium"  # Path for Kubernetes
-    return None  # Local testing will use the default Chrome installation 
-
-def get_movie_id(title):
-    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-    response = requests.get(url)
-    data = response.json()
-    if data.get("Response") == "True":
-        return data.get("imdbID")
-    return None
+from selenium.webdriver.chrome.options import Options
+from bs4 import BeautifulSoup
+import time
 
 def get_reviews(movie_id, max_reviews=20):
-    reviews = []
-
+    # Set up Chrome options
     chrome_options = Options()
     chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    )
-    
-    # Set the path for the Chrome binary for cloud environments
-    chrome_binary_location = get_chrome_binary_location()
-    if chrome_binary_location:
-        chrome_options.binary_location = chrome_binary_location
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.binary_location = "/usr/bin/google-chrome"
 
-    # Set up the ChromeDriver using ChromeDriverManager
-    driver = webdriver.Chrome(executable_path="/usr/bin/chromedriver", options=chrome_options)
+    # Set up Chrome driver service
+    service = Service("/usr/bin/chromedriver")
 
+    # Start driver
+    driver = webdriver.Chrome(service=service, options=chrome_options)
 
-    try:
-        url = f"https://www.imdb.com/title/{movie_id}/reviews"
-        print(f"Opening: {url}")
-        driver.get(url)
-        time.sleep(3)
+    # IMDb review page
+    url = f"https://www.imdb.com/title/{movie_id}/reviews"
+    driver.get(url)
 
-        # Close login popup if it appears
+    # Scroll and click "Load More" until enough reviews
+    while True:
         try:
-            close_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="Close"]')
-            close_button.click()
-            time.sleep(1)
+            load_more = driver.find_element("xpath", '//button[contains(text(), "Load More")]')
+            if load_more:
+                driver.execute_script("arguments[0].click();", load_more)
+                time.sleep(2)
         except:
-            pass
+            break
 
-        # Scroll down to load more reviews
-        for _ in range(5):
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
+        page_source = driver.page_source
+        soup = BeautifulSoup(page_source, "html.parser")
+        reviews = soup.select("div.review-container")
+        if len(reviews) >= max_reviews:
+            break
 
-        # Correct review selector (IMDb May 2025)
-        review_blocks = driver.find_elements(
-            By.CSS_SELECTOR,
-            "div.ipc-overflowText--listCard div > div > div"
-        )
+    # Final review extraction
+    reviews = soup.select("div.review-container")
+    extracted = []
+    for r in reviews[:max_reviews]:
+        review_text = r.select_one("div.text.show-more__control")
+        if review_text:
+            extracted.append(review_text.text.strip())
 
-        print(f"Found {len(review_blocks)} reviews.")
-        for block in review_blocks[:max_reviews]:
-            reviews.append(block.text.strip())
-
-    except Exception as e:
-        print("Error:", str(e))
-
-    finally:
-        driver.quit()
-
-    return reviews
+    driver.quit()
+    return extracted
