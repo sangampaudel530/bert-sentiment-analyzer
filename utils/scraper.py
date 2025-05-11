@@ -13,15 +13,18 @@ def get_movie_id(movie_name):
     options.add_argument("--headless")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+    )
 
     driver = webdriver.Chrome(options=options)
     driver.get(search_url)
 
     try:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "a.ipc-metadata-list-summary-item__t"))
+        wait = WebDriverWait(driver, 10)
+        first_result = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "td.result_text a"))
         )
-        first_result = driver.find_element(By.CSS_SELECTOR, "a.ipc-metadata-list-summary-item__t")
         href = first_result.get_attribute("href")
         movie_id = href.split("/")[4]
         return movie_id
@@ -31,13 +34,16 @@ def get_movie_id(movie_name):
     finally:
         driver.quit()
 
-
 def get_reviews(movie_id, max_reviews=20):
     url = f"https://www.imdb.com/title/{movie_id}/reviews"
+
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+    )
 
     driver = webdriver.Chrome(options=options)
     driver.get(url)
@@ -48,8 +54,11 @@ def get_reviews(movie_id, max_reviews=20):
     try:
         review_elements = driver.find_elements(By.CSS_SELECTOR, "div.review-container")
         for review_element in review_elements[:max_reviews]:
-            review_text = review_element.find_element(By.CSS_SELECTOR, ".text.show-more__control").text
-            reviews.append(review_text)
+            try:
+                review_text = review_element.find_element(By.CSS_SELECTOR, ".text.show-more__control").text
+                reviews.append(review_text)
+            except:
+                continue
     except Exception as e:
         print("Error extracting reviews:", e)
     finally:
