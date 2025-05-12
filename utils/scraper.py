@@ -1,73 +1,65 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-def get_movie_id(movie_name):
-    search_name = movie_name.replace(" ", "+")
-    search_url = f"https://www.imdb.com/find?q={search_name}&s=tt&ttype=ft&ref_=fn_ft"
-
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
-    )
+def get_reviews(movie_name):
+    options = webdriver.ChromeOptions()
+   # options.add_argument('--headless')  # Optional: Run headless
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
 
     driver = webdriver.Chrome(options=options)
-    driver.get(search_url)
 
     try:
-        wait = WebDriverWait(driver, 10)
-        first_result = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "td.result_text a"))
+        # Step 1: IMDb search
+        driver.get("https://www.imdb.com")
+        search_box = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, 'suggestion-search'))
         )
-        href = first_result.get_attribute("href")
-        movie_id = href.split("/")[4]  # Extract movie ID from URL
-        return movie_id
+        search_box.send_keys(movie_name)
+        search_box.send_keys(Keys.RETURN)
+
+        # Step 2: Click the first result
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div.ipc-metadata-list-summary-item__c a"))
+        )
+        driver.find_element(By.CSS_SELECTOR, "div.ipc-metadata-list-summary-item__c a").click()
+
+        time.sleep(2)  # Give page time to fully load
+
+        # Step 3: Click the 'User Reviews' tab using verified selector
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "div.sc-466f296a-0.jLmGLJ li:nth-child(2) a"))
+        )
+        user_review_link = driver.find_element(By.CSS_SELECTOR, "div.sc-466f296a-0.jLmGLJ li:nth-child(2) a")
+        driver.execute_script("arguments[0].click();", user_review_link)
+
+        # Step 4: Wait for review content to load
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.ipc-overflowText--listCard div.ipc-html-content"))
+        )
+        review_elements = driver.find_elements(By.CSS_SELECTOR, "div.ipc-overflowText--listCard div.ipc-html-content")
+        reviews = [el.text.strip() for el in review_elements if el.text.strip()]
+
+        return reviews
+
     except Exception as e:
-        print("Movie not found:", e)
-        return None
+        print(f"Error: {e}")
+        return []
+
     finally:
         driver.quit()
 
-def get_reviews(movie_id, max_reviews=20):
-    url = f"https://www.imdb.com/title/{movie_id}/reviews"
-
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
-    )
-
-    driver = webdriver.Chrome(options=options)
-    driver.get(url)
-
-    time.sleep(3)  # Give the page time to load
-
-    reviews = []
-    try:
-        # Wait for review containers to be present
-        wait = WebDriverWait(driver, 10)
-        review_elements = wait.until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.review-container"))
-        )
-        
-        for review_element in review_elements[:max_reviews]:
-            try:
-                review_text = review_element.find_element(By.CSS_SELECTOR, ".text.show-more__control").text
-                reviews.append(review_text)
-            except Exception as e:
-                print("Error extracting review text:", e)
-                continue
-    except Exception as e:
-        print("Error extracting reviews:", e)
-    finally:
-        driver.quit()
-
-    return reviews
+# Example usage
+if __name__ == "__main__":
+    movie = "Interstellar"
+    reviews = get_reviews(movie)
+    if reviews:
+        print(f"Reviews for {movie}:\n")
+        for idx, review in enumerate(reviews, 1):
+            print(f"{idx}. {review}\n")
+    else:
+        print("No reviews found.")

@@ -1,10 +1,9 @@
 import pandas as pd
 import streamlit
-from utils.scraper import get_movie_id, get_reviews
+from utils.scraper import get_reviews
 from streamlit_lottie import st_lottie
 import requests
 from utils.predict import predict_sentiment_with_score
-
 
 # Page configuration
 streamlit.set_page_config(page_title="🎬 Movie Review Sentiment App", layout="wide", page_icon="🎥")
@@ -173,30 +172,31 @@ elif streamlit.session_state.active_section == "imdb":
             streamlit.warning("Please enter a movie title.")
         else:
             with streamlit.spinner("Fetching data..."):
-                movie_id = get_movie_id(movie_title)
-                if movie_id:
-                    url = f"http://www.omdbapi.com/?i={movie_id}&apikey=ad0e3181"
-                    response = requests.get(url)
-                    movie_data = response.json()
-                    poster_url = movie_data.get("Poster", None)
-
-                    reviews = get_reviews(movie_id, max_reviews=20)
-                    if poster_url:
-                        streamlit.image(poster_url, caption=f"Poster of {movie_title}", use_container_width=True)
-                    if reviews:
-                        streamlit.success(f"Fetched {len(reviews)} reviews for '{movie_title}'")
-                        streamlit.subheader("📃 Reviews")
-                        for i, review in enumerate(reviews, 1):
-                            sentiment_score = predict_sentiment_with_score([review])
-                            sentiment, score = sentiment_score[0]
-                            color = "green" if sentiment == "Positive" else "red"
-                            streamlit.markdown(
-                                f"<div class='review-box' style='color:{color};'><strong>Review {i}:</strong><br>{review}<br><br><strong>Sentiment:</strong> {sentiment} with confidence score: {score:.2f}</div>",
-                                unsafe_allow_html=True)
-                    else:
-                        streamlit.error("No reviews found or failed to scrape reviews.")
+                # Use OMDb API to fetch poster
+                api_key = "ad0e3181"
+                omdb_url = f"http://www.omdbapi.com/?t={movie_title}&apikey={api_key}"
+                omdb_response = requests.get(omdb_url)
+                movie_data = omdb_response.json()
+                poster_url = movie_data.get("Poster", None)
+                
+                # Fetch reviews directly using the movie title
+                reviews = get_reviews(movie_title, max_reviews=20)
+                
+                if poster_url:
+                    streamlit.image(poster_url, caption=f"Poster of {movie_title}", use_container_width=True)
+                
+                if reviews:
+                    streamlit.success(f"Fetched {len(reviews)} reviews for '{movie_title}'")
+                    streamlit.subheader("📃 Reviews")
+                    for i, review in enumerate(reviews, 1):
+                        sentiment_score = predict_sentiment_with_score([review])
+                        sentiment, score = sentiment_score[0]
+                        color = "green" if sentiment == "Positive" else "red"
+                        streamlit.markdown(
+                            f"<div class='review-box' style='color:{color};'><strong>Review {i}:</strong><br>{review}<br><br><strong>Sentiment:</strong> {sentiment} with confidence score: {score:.2f}</div>",
+                            unsafe_allow_html=True)
                 else:
-                    streamlit.error("Movie not found. Please check the title and try again.")
+                    streamlit.error("No reviews found or failed to scrape reviews.")
 
 # Section: Manual Input
 elif streamlit.session_state.active_section == "manual":

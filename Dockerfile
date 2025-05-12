@@ -14,9 +14,11 @@ RUN apt-get update && apt-get install -y \
     libx11-xcb1 \
     fonts-liberation \
     xdg-utils \
+    libpci3 \
+    libgl1-mesa-glx \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chrome (v136)
+# Install Chrome (latest stable version)
 RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
     apt-get update && \
     apt-get install -y ./google-chrome-stable_current_amd64.deb && \
@@ -31,18 +33,23 @@ RUN DRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-test
     chmod +x /usr/bin/chromedriver && \
     rm -rf chromedriver-linux64*
 
-# Set environment variables
+# Set environment variables for Chrome and Chromedriver
 ENV CHROME_BIN=/usr/bin/google-chrome
 ENV CHROMIUM_PATH=/usr/bin/google-chrome
+ENV PATH=$PATH:/usr/bin/chromedriver
 
 # Set workdir and copy app files
 WORKDIR /app
+
+# Install dependencies
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application files
 COPY . /app/
 
 # Expose Streamlit port
 EXPOSE 8501
 
-# Start the app
+# Start the app with Streamlit
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false"]
