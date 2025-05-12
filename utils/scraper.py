@@ -5,9 +5,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 
-def get_reviews(movie_name):
+def get_reviews(movie_name, max_reviews=20):
     options = webdriver.ChromeOptions()
-   # options.add_argument('--headless')  # Optional: Run headless
+    # options.add_argument('--headless')  # Optional: Run headless
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
 
@@ -38,11 +38,30 @@ def get_reviews(movie_name):
         driver.execute_script("arguments[0].click();", user_review_link)
 
         # Step 4: Wait for review content to load
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.ipc-overflowText--listCard div.ipc-html-content"))
-        )
-        review_elements = driver.find_elements(By.CSS_SELECTOR, "div.ipc-overflowText--listCard div.ipc-html-content")
-        reviews = [el.text.strip() for el in review_elements if el.text.strip()]
+        reviews = []
+        while len(reviews) < max_reviews:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.ipc-overflowText--listCard div.ipc-html-content"))
+            )
+            review_elements = driver.find_elements(By.CSS_SELECTOR, "div.ipc-overflowText--listCard div.ipc-html-content")
+            new_reviews = [el.text.strip() for el in review_elements if el.text.strip()]
+            reviews.extend(new_reviews)
+
+            # If we have reached or exceeded the max_reviews, break the loop
+            if len(reviews) >= max_reviews:
+                reviews = reviews[:max_reviews]  # Limit the list to max_reviews
+                break
+
+            # Step 5: Check if there's a next page of reviews
+            try:
+                next_button = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.load-more--next-page"))
+                )
+                driver.execute_script("arguments[0].click();", next_button)
+                time.sleep(2)  # Wait for the next page to load
+            except Exception as e:
+                print("No more reviews or failed to load next page.")
+                break
 
         return reviews
 
@@ -52,14 +71,3 @@ def get_reviews(movie_name):
 
     finally:
         driver.quit()
-
-# Example usage
-if __name__ == "__main__":
-    movie = "Interstellar"
-    reviews = get_reviews(movie)
-    if reviews:
-        print(f"Reviews for {movie}:\n")
-        for idx, review in enumerate(reviews, 1):
-            print(f"{idx}. {review}\n")
-    else:
-        print("No reviews found.")
