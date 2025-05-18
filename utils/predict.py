@@ -8,7 +8,7 @@ from safetensors.torch import load_file
 # Set model directory and file paths
 MODEL_DIR = "bert_sentiment_model"
 MODEL_PATH = os.path.join(MODEL_DIR, "model.safetensors")
-GDRIVE_FILE_ID = "1Qki6uC3x9DX_n1OoEZxuD-C8bdGZUM9n"
+GDRIVE_FILE_ID = "1MzPaFPmv4ww9Q-0FFjGfyXFN2KRoRW81"
 
 # Download model if not present
 if not os.path.exists(MODEL_PATH):
