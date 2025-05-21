@@ -1,6 +1,6 @@
 # Movie Review Sentiment Analyzer
 
-A BERT-based sentiment analysis web application that classifies IMDb movie reviews into **Positive** or **Negative**. It supports manual review input, live IMDb scraping for sentiment prediction, and dataset-based batch predictions with downloadable results. Deployed via Docker and Kubernetes, accessible  via [moviereviewsentimentanalyzer.com.np](https://moviereviewsentimentanalyzer.com.np).
+A BERT-based sentiment analysis web application that classifies IMDb movie reviews into **Positive** or **Negative**. It supports manual review input, live IMDb scraping for sentiment prediction, and dataset-based batch predictions with downloadable results. Deployed via Docker and Kubernetes, accessible  via http://172.212.76.116
 
 ---
 
